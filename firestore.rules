@@ -1,0 +1,56 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Usuários autenticados podem ler qualquer coisa
+    match /{document=**} {
+      allow read: if request.auth != null;
+    }
+
+    // Utilizadores - coordenadores podem alterar
+    match /utilizadores/{userId} {
+      allow write: if request.auth != null;
+    }
+
+    // Notas - qualquer usuário autenticado pode escrever (prof/coord)
+    match /notas/{noteId} {
+      allow write: if request.auth != null;
+    }
+
+    // Disciplinas
+    match /disciplinas/{discId} {
+      allow write: if request.auth != null;
+    }
+
+    // Cursos
+    match /cursos/{cursoId} {
+      allow write: if request.auth != null;
+    }
+
+    // Comunicados
+    match /comunicados/{comId} {
+      allow write: if request.auth != null;
+    }
+
+    // Requerimentos
+    match /requerimentos/{reqId} {
+      allow write: if request.auth != null;
+    }
+
+    // Declarações emitidas
+    match /declaracoes_emitidas/{declId} {
+      allow write: if request.auth != null;
+    }
+
+    // Ferramentas (admin)
+    match /ferramentas/{toolId} {
+      allow write: if request.auth != null;
+    }
+
+    // NOVA: Turmas
+    match /turmas/{turmaId} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
