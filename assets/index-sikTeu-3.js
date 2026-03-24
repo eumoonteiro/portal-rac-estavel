@@ -63,7 +63,7 @@ const fe = {
   apiKey: "AIzaSyBI_PS9poJyyCrGgTXaU82xNoEGCh6jFK0",
   authDomain: "portal-rac.firebaseapp.com",
   projectId: "portal-rac",
-  storageBucket: "portal-rac.appspot.com",
+  storageBucket: "portal-rac.firebasestorage.app",
   messagingSenderId: "844052242861",
   appId: "1:844052242861:web:03aff23e67ec52c07fc124",
 },
@@ -3215,6 +3215,31 @@ async function notificarRequerimentoRespondido(alunoUid, assunto, resposta) {
   }
 }
 
+// Notify student when coordinator uploads a document
+async function notificarDocumentoEnviado(alunoUid, tipoDocumento) {
+  try {
+    const alunoDoc = await _(L(u, 'utilizadores', alunoUid));
+    if (!alunoDoc.exists()) return;
+    const alunoData = alunoDoc.data();
+    const email = alunoData.emailContato;
+    if (!email) return;
+
+    const cursoNome = F.get(y)?.nome || 'Pós-graduação RAC';
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_GERAL, {
+      to_email: email,
+      to_name: alunoData.nome || 'Aluno(a)',
+      subject: '📄 Novo documento disponível - ' + tipoDocumento,
+      title: '📄 Novo Documento Disponível',
+      message: `A coordenação do curso ${cursoNome} disponibilizou um novo documento para você:`,
+      detail: `Tipo de documento: ${tipoDocumento}\n\nVocê já pode visualizá-lo e baixá-lo acessando o seu portal do aluno.`,
+      portal_url: 'https://portal.racposgraduacao.com.br/',
+    });
+    console.log(`[Email] ${tipoDocumento} → aluno:`, email);
+  } catch (err) {
+    console.warn('[Email] Erro notificação documento:', err);
+  }
+}
+
 // ============ EMAIL DE CONTATO DO ALUNO ============
 
 window.salvarEmailAluno = async function (email) {
@@ -3336,6 +3361,8 @@ window.uploadDeclaracao = async function (input) {
     statusEl.className = 'text-[10px] text-emerald-600 font-bold';
     const alunoNome = document.getElementById('declaracao-aluno-select').selectedOptions[0]?.textContent || 'Aluno';
     f(`Declaração de ${alunoNome} enviada!`, 'success');
+    // Notificar aluno por email
+    notificarDocumentoEnviado(alunoId, 'Declaração de Matrícula').catch(e => console.warn(e));
   } catch (err) {
     console.error('Erro upload declaração:', err);
     statusEl.textContent = '❌ Erro';
@@ -3380,6 +3407,8 @@ window.uploadCarteirinha = async function (input) {
     statusEl.className = 'text-[10px] text-emerald-600 font-bold';
     const alunoNome = document.getElementById('carteirinha-aluno-select').selectedOptions[0]?.textContent || 'Aluno';
     f(`Carteirinha de ${alunoNome} enviada!`, 'success');
+    // Notificar aluno por email
+    notificarDocumentoEnviado(alunoId, 'Carteirinha de Estudante').catch(e => console.warn(e));
   } catch (err) {
     console.error('Erro upload carteirinha:', err);
     statusEl.textContent = '❌ Erro';
