@@ -1544,10 +1544,8 @@ function Ge(a) {
                         <p class="text-xs text-gray-500">Documento emitido digitalmente por:</p>
                         <p class="font-semibold text-sm">${N}</p>
                     </div>
-                    <div class="mt-6 pt-4 border-t text-center text-gray-400 text-xs">
-                        <p class="font-semibold">Licenciada por Faculdade CENSUPEG</p>
-                        <p>CNPJ: 10.158.686/0001-05</p>
-                        <p class="mt-2">Código de Verificação: ${ee}</p>
+                    <div class="mt-6 pt-4 border-t text-center text-gray-500 text-xs">
+                        <p>Este documento pode ser validado com a secretaria acadêmica pelo e-mail: <span class="font-semibold">racposgraduacao@gmail.com</span> ou <span class="font-semibold">21 92043-1331</span>.</p>
                     </div>
                 `),
         e.classList.remove("hidden"),
