@@ -706,12 +706,30 @@ async function ye(a) {
                                 title="Salvar">
                             <i data-lucide="save" class="w-4 h-4"></i>
                         </button>
+                        <button class="bg-red-500 text-white p-2 rounded hover:bg-red-700 transition"
+                                onclick="window.excluirDisciplina('${o.id}')"
+                                title="Excluir">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
                     </div>
                 `),
         e.appendChild(s));
     }),
     lucide.createIcons());
 }
+window.excluirDisciplina = async (a) => {
+    if (!confirm("Deseja excluir esta disciplina?")) return;
+    try {
+        await Ne(L(u, "disciplinas", a));
+        await Z(y);
+        ye(y);
+        J("coord", y);
+        f("Disciplina excluída com sucesso!", "success");
+    } catch (o) {
+        console.error("Erro ao excluir disciplina:", o);
+        f("Erro ao excluir disciplina.", "error");
+    }
+};
 window.salvarProfessor = async (a) => {
   const t = document.getElementById(`prof-input-${a}`).value;
   try {
@@ -2464,6 +2482,7 @@ function renderTurmasGestao() {
         <div class="flex items-center gap-2">
           ${statusBadge}
           ${isAtiva ? `<button onclick="event.stopPropagation(); concluirTurma('${t.id}')" title="Concluir turma" class="p-1 text-gray-400 hover:text-red-500 transition"><i data-lucide="check-circle" class="w-4 h-4"></i></button>` : ''}
+          <button onclick="event.stopPropagation(); excluirTurma('${t.id}')" title="Excluir turma" class="p-1 text-gray-400 hover:text-red-600 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
         </div>
       </div>
     `;
@@ -2502,6 +2521,18 @@ window.concluirTurma = async function (turmaId) {
     console.error('Erro ao concluir turma:', err);
     f('Erro ao concluir turma.', 'error');
   }
+};
+
+window.excluirTurma = async function (turmaId) {
+    if (!confirm('Deseja EXCLUIR esta turma permanentemente?')) return;
+    try {
+        await Ne(L(u, 'turmas', turmaId));
+        f('Turma excluída com sucesso!', 'success');
+        await carregarTurmasGestao();
+    } catch (err) {
+        console.error('Erro ao excluir turma:', err);
+        f('Erro ao excluir turma.', 'error');
+    }
 };
 
 // Populate "Nova Turma" modal when discipline changes
@@ -3450,6 +3481,24 @@ async function popularDocumentosSelects() {
     console.error('Erro ao popular selects de documentos:', err);
   }
 }
+
+window.visualizarDocumento = async function (tipo) {
+    const selectId = tipo === 'declaracao' ? 'declaracao-aluno-select' : 'carteirinha-aluno-select';
+    const alunoId = document.getElementById(selectId).value;
+    if (!alunoId) {
+        f('Selecione um aluno primeiro.', 'error');
+        return;
+    }
+    try {
+        const path = tipo === 'declaracao' ? `declaracoes/${y}/${alunoId}.pdf` : `carteirinhas/${y}/${alunoId}.pdf`;
+        const storageRef = sr(st, path);
+        const url = await gdu(storageRef);
+        window.open(url, '_blank');
+    } catch (err) {
+        console.error('Erro ao visualizar documento:', err);
+        f('Documento não encontrado para este aluno.', 'error');
+    }
+};
 
 // Hook: populate carteirinha select when coord dashboard loads
 const coordDashDoc = document.getElementById('coordenador-dashboard');
