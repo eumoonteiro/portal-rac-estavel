@@ -723,6 +723,14 @@
                                     <p class="text-xs opacity-80">Grade</p>
                                 </div>
                             </button>
+                            <button onclick="document.getElementById('panel-notas-coord').scrollIntoView({behavior:'smooth'})"
+                                class="w-full p-4 flex items-center gap-4 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-2xl hover:shadow-lg hover:scale-[1.02] transition">
+                                <i data-lucide="file-pen-line" class="w-6 h-6"></i>
+                                <div class="text-left">
+                                    <p class="font-bold">Lançar Notas</p>
+                                    <p class="text-xs opacity-80">Avaliações</p>
+                                </div>
+                            </button>
                         </div>
                     </div>
 
@@ -750,18 +758,79 @@
                                 <option value="">Selecione o Aluno...</option>
                             </select>
                             <button id="btn-gerar-ficha"
-                                class="px-4 py-2 bg-indigo-100 text-indigo-700 font-bold rounded-xl hover:bg-indigo-200 flex items-center gap-2 opacity-80 hover:opacity-100"><i
+                                class="px-4 py-2 bg-indigo-100 text-indigo-700 font-bold rounded-xl hover:bg-indigo-300 flex items-center gap-2 opacity-80 hover:opacity-100 transition"><i
                                     data-lucide="printer" class="w-4 h-4"></i> PDF</button>
                             <button id="btn-editar-aluno"
-                                class="px-4 py-2 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 flex items-center gap-2"><i
+                                class="px-4 py-2 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 flex items-center gap-2 transition"><i
                                     data-lucide="edit" class="w-4 h-4"></i> Editar</button>
                             <button onclick="excluirUsuario()"
-                                class="px-4 py-2 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 flex items-center gap-2"><i
+                                class="px-4 py-2 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 flex items-center gap-2 transition"><i
                                     data-lucide="trash-2" class="w-4 h-4"></i> Excluir</button>
                         </div>
                     </div>
 
-                    <!-- NOVO: Calendário Removido -->
+                    <!-- LANÇAMENTO DE NOTAS (COORD) -->
+                    <div id="panel-notas-coord" class="glass-panel p-6 rounded-3xl border-t-4 border-indigo-500 bg-white fade-in">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center gap-4">
+                                <div class="p-2.5 bg-indigo-100 rounded-2xl text-indigo-600 shadow-sm"><i data-lucide="file-pen-line" class="w-6 h-6"></i></div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-gray-800">Lançamento de Notas</h3>
+                                    <p class="text-xs text-gray-500">Registre notas finais diretamente no sistema.</p>
+                                </div>
+                            </div>
+                            <div class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">Coordenação</div>
+                        </div>
+
+                        <form id="lancar-nota-form-coord" class="space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <!-- Turma Selector -->
+                                <div>
+                                    <label for="turma-select-notas-coord" class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 ml-1">Turma (Filtro)</label>
+                                    <div class="relative">
+                                        <select id="turma-select-notas-coord" class="w-full p-3.5 pl-10 border border-gray-100 rounded-xl bg-gray-50 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none appearance-none" onchange="onTurmaNotasChangeCoord()">
+                                            <option value="">Todas as Turmas</option>
+                                        </select>
+                                        <i data-lucide="layers" class="absolute left-3 top-3.5 w-5 h-5 text-gray-400"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="disciplina-select-coord" class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 ml-1">Disciplina</label>
+                                    <div class="relative">
+                                        <select id="disciplina-select-coord" class="w-full p-3.5 pl-10 border border-gray-100 rounded-xl bg-white text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none appearance-none" required>
+                                            <option value="">Selecione...</option>
+                                        </select>
+                                        <i data-lucide="book" class="absolute left-3 top-3.5 w-5 h-5 text-gray-400"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="aluno-select-coord" class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 ml-1">Aluno</label>
+                                    <div class="relative">
+                                        <select id="aluno-select-coord" class="w-full p-3.5 pl-10 border border-gray-100 rounded-xl bg-white text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none appearance-none" required>
+                                            <option value="">Selecione...</option>
+                                        </select>
+                                        <i data-lucide="user" class="absolute left-3 top-3.5 w-5 h-5 text-gray-400"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-gradient-to-br from-indigo-50 to-purple-50 p-6 rounded-2xl border border-indigo-100 shadow-inner">
+                                <div class="flex flex-col md:flex-row items-center gap-6">
+                                    <div class="w-full md:w-32">
+                                        <label for="nota-input-coord" class="block text-sm font-bold text-indigo-900 mb-2 text-center md:text-left">Nota (0-10)</label>
+                                        <input type="number" step="0.1" min="0" max="10" id="nota-input-coord" class="w-full p-4 text-center text-2xl font-black border-2 border-indigo-200 rounded-2xl bg-white focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" placeholder="0.0" required>
+                                    </div>
+                                    <div class="flex-1 w-full">
+                                        <button type="submit" class="w-full h-[64px] mt-2 md:mt-7 bg-indigo-600 text-white font-bold text-lg rounded-2xl shadow-xl shadow-indigo-500/30 hover:bg-indigo-700 hover:shadow-indigo-500/40 transition-all transform hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3">
+                                            <i data-lucide="check-circle" class="w-6 h-6"></i>
+                                            Confirmar Lançamento
+                                        </button>
+                                    </div>
+                                </div>
+                                <p class="text-[10px] text-indigo-400 mt-4 text-center italic">A nota será salva instantaneamente para o aluno e disciplina selecionados.</p>
+                            </div>
+                        </form>
+                    </div>
 
                     <!-- GESTÃO DE TURMAS -->
                     <div class="glass-panel p-6 rounded-3xl border-t-4 border-purple-400">

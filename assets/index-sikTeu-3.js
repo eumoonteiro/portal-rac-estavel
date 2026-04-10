@@ -3548,3 +3548,109 @@ if (alunoDashDoc) {
   alunoDocObserver.observe(alunoDashDoc, { attributes: true, attributeFilter: ['class'] });
 }
 
+
+// ============ COORDINATOR GRADES LOGIC (Added by Antigravity) ============
+let turmasNotasCoordPopulated = false;
+async function popularTurmasNotasCoord() {
+  const select = document.getElementById('turma-select-notas-coord');
+  if (!select) return;
+  if (turmasNotasCoordPopulated) return;
+  turmasNotasCoordPopulated = true;
+
+  select.innerHTML = '<option value="">Todas as Turmas</option>';
+
+  try {
+    const snap = await D($(C(u, 'turmas'), v('cursoId', '==', y), v('status', '==', 'ativa')));
+    const turmasNotas = [];
+    snap.forEach(d => {
+      const data = d.data();
+      if ((data.alunos || []).length > 0) {
+        turmasNotas.push({ id: d.id, ...data });
+      }
+    });
+    turmasNotas.sort((a, b) => (a.disciplinaNome || '').localeCompare(b.disciplinaNome || ''));
+
+    turmasNotas.forEach(t => {
+      const numAlunos = (t.alunos || []).length;
+      select.innerHTML += `<option value="${t.id}" data-disc-nome="${t.disciplinaNome}">${t.disciplinaNome} — ${t.nome} (${numAlunos} alunos)</option>`;
+    });
+  } catch (err) {
+    console.error('Erro ao carregar turmas para notas (coord):', err);
+    turmasNotasCoordPopulated = false; 
+  }
+}
+
+window.onTurmaNotasChangeCoord = async function () {
+  const turmaSelect = document.getElementById('turma-select-notas-coord');
+  const turmaId = turmaSelect.value;
+
+  if (!turmaId) {
+    V('coord', y);
+    return;
+  }
+
+  const selectedOption = turmaSelect.selectedOptions[0];
+  const discNome = selectedOption?.dataset?.discNome;
+
+  const discSelect = document.getElementById('disciplina-select-coord');
+  if (discSelect && discNome) {
+    for (const opt of discSelect.options) {
+      if (opt.value === discNome) {
+        discSelect.value = opt.value;
+        break;
+      }
+    }
+  }
+
+  const alunoSelect = document.getElementById('aluno-select-coord');
+  if (!alunoSelect) return;
+  alunoSelect.innerHTML = '<option value="">Carregando...</option>';
+
+  try {
+    const turmaDoc = await _(L(u, 'turmas', turmaId));
+    if (!turmaDoc.exists()) return;
+    const alunosDaTurma = turmaDoc.data().alunos || [];
+
+    if (alunosDaTurma.length === 0) {
+      alunoSelect.innerHTML = '<option>Nenhum aluno nesta turma</option>';
+      return;
+    }
+
+    const alunosSnap = await D($(C(u, 'utilizadores'), v('role', '==', 'aluno'), v('cursos', 'array-contains', y)));
+    const alunosMap = [];
+    alunosSnap.forEach(d => {
+      if (alunosDaTurma.includes(d.id)) {
+        alunosMap.push({ id: d.id, nome: d.data().nome || d.data().cpf });
+      }
+    });
+    alunosMap.sort((a, b) => a.nome.localeCompare(b.nome));
+
+    alunoSelect.innerHTML = '<option value="">Selecione um aluno</option>';
+    alunosMap.forEach(a => {
+      alunoSelect.innerHTML += `<option value="${a.id}">${a.nome}</option>`;
+    });
+  } catch (err) {
+    console.error('Erro ao filtrar alunos por turma (coord):', err);
+    alunoSelect.innerHTML = '<option>Erro ao carregar</option>';
+  }
+};
+
+const coordDash = document.getElementById('coordenador-dashboard');
+if (coordDash) {
+  const coordObserver = new MutationObserver((mutations) => {
+    mutations.forEach(m => {
+      if (m.type === 'attributes' && m.attributeName === 'class') {
+        if (!coordDash.classList.contains('hidden')) {
+           // Small delay to ensure curso selection (y) is ready
+           setTimeout(popularTurmasNotasCoord, 800);
+           // Also ensure selects are initialized
+           V('coord', y);
+           J('coord');
+        } else {
+           turmasNotasCoordPopulated = false; // Reset when dashboard hidden to allow refresh when coming back
+        }
+      }
+    });
+  });
+  coordObserver.observe(coordDash, { attributes: true, attributeFilter: ['class'] });
+}
