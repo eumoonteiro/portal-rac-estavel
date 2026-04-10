@@ -3635,7 +3635,6 @@ window.onTurmaNotasChangeCoord = async function () {
   }
 };
 
-const coordDash = document.getElementById('coordenador-dashboard');
 if (coordDash) {
   const coordObserver = new MutationObserver((mutations) => {
     mutations.forEach(m => {
