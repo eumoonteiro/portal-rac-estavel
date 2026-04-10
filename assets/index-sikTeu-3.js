@@ -3824,23 +3824,22 @@ window.salvarNotasMassa = async function() {
 async function notificarVariasNotasPorEmail(alunoUid, notasArray) {
     if (!notasArray || notasArray.length === 0) return;
     try {
-        // Obter dados do aluno
         const alunoSnap = await _(L(u, 'utilizadores', alunoUid));
         const aluno = alunoSnap.exists() ? alunoSnap.data() : null;
         if (!aluno || !aluno.emailContato) return;
 
         const cursoNome = F.get(y)?.nome || 'Pós-graduação RAC';
         
-        let listaHtml = notasArray.map(n => `<li><b>${n.disciplina}</b>: ${n.nota.toFixed(1)}</li>`).join('');
-        const detail = `<ul style="list-style: none; padding: 0;">${listaHtml}</ul>`;
+        // Formata uma lista limpa em texto simples (para evitar que o template escape as tags HTML como visto nos prints)
+        let listaTexto = notasArray.map(n => `- ${n.disciplina}: ${n.nota.toFixed(1)}`).join('\n');
 
         await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_GERAL, {
             to_email: aluno.emailContato,
             to_name: aluno.nome || 'Aluno(a)',
-            subject: `🎓 Suas notas foram atualizadas - ${cursoNome}`,
+            subject: `🎓 Notas Atualizadas - ${cursoNome}`,
             title: '🎓 Atualização de Notas',
-            message: `Olá, ${aluno.nome || 'aluno(a)'}. Novas avaliações foram registradas em seu portal para o curso ${cursoNome}:`,
-            detail: detail,
+            message: `Olá, ${aluno.nome || 'aluno(a)'}! Identificamos novas notas lançadas em seu portal para o curso ${cursoNome}. Segue o detalhamento:`,
+            detail: listaTexto,
             portal_url: 'https://portal.racposgraduacao.com.br/'
         });
         console.log('[Email Massa] Sincronizado para:', aluno.emailContato);
