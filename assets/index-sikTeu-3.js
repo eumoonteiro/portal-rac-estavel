@@ -3654,3 +3654,196 @@ if (coordDash) {
   });
   coordObserver.observe(coordDash, { attributes: true, attributeFilter: ['class'] });
 }
+
+// ============ MASS LAUNCH LOGIC (Added by Antigravity) ============
+
+window.ativarModoMassa = async function() {
+    const turmaId = document.getElementById('turma-select-notas-coord').value;
+    const alunoId = document.getElementById('aluno-select-coord').value;
+
+    const container = document.getElementById('mass-launch-container');
+    const individual = document.getElementById('individual-launch-container');
+    const tbody = document.getElementById('mass-launch-tbody');
+    const title = document.getElementById('mass-launch-title');
+    const subtitle = document.getElementById('mass-launch-subtitle');
+    const thItem = document.getElementById('mass-th-item');
+    const thContext = document.getElementById('mass-th-context');
+
+    tbody.innerHTML = '<tr><td colspan="3" class="p-8 text-center text-gray-500"><div class="animate-spin inline-block w-6 h-6 border-[3px] border-current border-t-transparent text-indigo-600 rounded-full" role="status"><span class="sr-only">Carregando...</span></div><p class="mt-2">Carregando dados...</p></td></tr>';
+    individual.classList.add('hidden');
+    container.classList.remove('hidden');
+    container.scrollIntoView({ behavior: 'smooth' });
+
+    try {
+        if (turmaId) {
+            const turmaDoc = await _(L(u, 'turmas', turmaId));
+            const turmaData = turmaDoc.data();
+            const alunosIds = turmaData.alunos || [];
+            const disciplina = turmaData.disciplinaNome;
+
+            title.textContent = `Lançamento em Massa: ${disciplina}`;
+            subtitle.textContent = `Turma: ${turmaData.nome} (${alunosIds.length} alunos)`;
+            thItem.textContent = 'Estudante';
+            thContext.textContent = 'CPF do Aluno';
+
+            const studentsSnap = await D($(C(u, 'utilizadores'), v('role', '==', 'aluno'), v('cursos', 'array-contains', y)));
+            const studentsMap = [];
+            studentsSnap.forEach(d => {
+                if (alunosIds.includes(d.id)) studentsMap.push({id: d.id, ...d.data()});
+            });
+            studentsMap.sort((a,b) => (a.nome || '').localeCompare(b.nome || ''));
+
+            if (studentsMap.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="p-8 text-center text-gray-400">Nenhum aluno encontrado para esta turma.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            studentsMap.forEach(s => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="p-4 font-bold text-gray-700">${s.nome}</td>
+                        <td class="p-4 text-xs text-gray-500">${s.cpf || '-'}</td>
+                        <td class="p-4 border-l">
+                            <input type="number" step="0.1" min="0" max="10" 
+                                class="w-full p-2 text-center text-lg font-bold border-2 border-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none" 
+                                data-alunouid="${s.id}" data-disciplina="${disciplina}" placeholder="0.0">
+                        </td>
+                    </tr>
+                `;
+            });
+        } else if (alunoId) {
+            const alunoDoc = await _(L(u, 'utilizadores', alunoId));
+            const alunoData = alunoDoc.data();
+
+            title.textContent = `Lançamento em Massa: ${alunoData.nome}`;
+            subtitle.textContent = `Atribua notas para as várias disciplinas do curso.`;
+            thItem.textContent = 'Disciplina';
+            thContext.textContent = 'Professor Responsável';
+
+            const disciplines = Array.from(U.values()).sort((a,b) => a.nome.localeCompare(b.nome));
+
+            if (disciplines.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="p-8 text-center text-gray-400">Nenhuma disciplina cadastrada neste curso.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            disciplines.forEach(d => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="p-4 font-bold text-gray-700">${d.nome}</td>
+                        <td class="p-4 text-xs text-gray-500">${d.professor || '-'}</td>
+                        <td class="p-4 border-l">
+                            <input type="number" step="0.1" min="0" max="10" 
+                                class="w-full p-2 text-center text-lg font-bold border-2 border-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none" 
+                                data-alunouid="${alunoId}" data-disciplina="${d.nome}" placeholder="0.0">
+                        </td>
+                    </tr>
+                `;
+            });
+        } else {
+            f('Selecione primeiro uma Turma ou um Aluno para entrar no modo em massa.', 'info');
+            desativarModoMassa();
+        }
+    } catch (err) {
+        console.error('Erro modo massa:', err);
+        tbody.innerHTML = '<tr><td colspan="3" class="p-8 text-center text-red-500">Erro ao carregar dados. Verifique a conexão.</td></tr>';
+    }
+};
+
+window.desativarModoMassa = function() {
+    document.getElementById('mass-launch-container').classList.add('hidden');
+    document.getElementById('individual-launch-container').classList.remove('hidden');
+    document.getElementById('panel-notas-coord').scrollIntoView({ behavior: 'smooth' });
+};
+
+window.salvarNotasMassa = async function() {
+    const inputs = document.querySelectorAll('#mass-launch-tbody input');
+    const batch = De(u);
+    let count = 0;
+    const notifications = {}; 
+
+    const btn = document.getElementById('btn-salvar-massa');
+    const originalContent = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<div class="animate-spin grayscale opacity-70 w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-2"></div> Salvando...';
+
+    try {
+        inputs.forEach(input => {
+            const val = input.value.trim();
+            if (val !== "") {
+                const nota = parseFloat(val);
+                if (!isNaN(nota) && nota >= 0 && nota <= 10) {
+                    const alunoUid = input.dataset.alunouid;
+                    const disciplina = input.dataset.disciplina;
+                    const docId = `${alunoUid}_${disciplina.replace(/\s+/g, "-")}`;
+                    
+                    batch.set(L(u, 'notas', docId), {
+                        alunoUid,
+                        disciplina,
+                        nota,
+                        cursoId: y,
+                        atualizadaEm: H(),
+                        lancadoPor: I.nome || "Coordenação"
+                    }, { merge: true });
+
+                    count++;
+                    if (!notifications[alunoUid]) notifications[alunoUid] = [];
+                    notifications[alunoUid].push({ disciplina, nota });
+                }
+            }
+        });
+
+        if (count === 0) {
+            f('Nenhuma nota válida preenchida.', 'info');
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+            return;
+        }
+
+        await batch.commit();
+        f(`${count} notas lançadas com sucesso e enviadas para o email dos alunos!`, 'success');
+        desativarModoMassa();
+
+        // Agrupar notificações por aluno
+        for (const uid in notifications) {
+            notificarVariasNotasPorEmail(uid, notifications[uid]);
+        }
+
+    } catch (err) {
+        console.error('Erro salvar massa:', err);
+        f('Erro crítico ao salvar notas: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalContent;
+    }
+};
+
+async function notificarVariasNotasPorEmail(alunoUid, notasArray) {
+    if (!notasArray || notasArray.length === 0) return;
+    try {
+        // Obter dados do aluno
+        const alunoSnap = await _(L(u, 'utilizadores', alunoUid));
+        const aluno = alunoSnap.exists() ? alunoSnap.data() : null;
+        if (!aluno || !aluno.emailContato) return;
+
+        const cursoNome = F.get(y)?.nome || 'Pós-graduação RAC';
+        
+        let listaHtml = notasArray.map(n => `<li><b>${n.disciplina}</b>: ${n.nota.toFixed(1)}</li>`).join('');
+        const detail = `<ul style="list-style: none; padding: 0;">${listaHtml}</ul>`;
+
+        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_GERAL, {
+            to_email: aluno.emailContato,
+            to_name: aluno.nome || 'Aluno(a)',
+            subject: `🎓 Suas notas foram atualizadas - ${cursoNome}`,
+            title: '🎓 Atualização de Notas',
+            message: `Olá, ${aluno.nome || 'aluno(a)'}. Novas avaliações foram registradas em seu portal para o curso ${cursoNome}:`,
+            detail: detail,
+            portal_url: 'https://portal.racposgraduacao.com.br/'
+        });
+        console.log('[Email Massa] Sincronizado para:', aluno.emailContato);
+    } catch (err) {
+        console.warn('[Email Massa] Falha no envio:', err);
+    }
+}

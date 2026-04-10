@@ -782,54 +782,98 @@
                             <div class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">Coordenação</div>
                         </div>
 
-                        <form id="lancar-nota-form-coord" class="space-y-6">
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <!-- Turma Selector -->
-                                <div>
-                                    <label for="turma-select-notas-coord" class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 ml-1">Turma (Filtro)</label>
-                                    <div class="relative">
-                                        <select id="turma-select-notas-coord" class="w-full p-3.5 pl-10 border border-gray-100 rounded-xl bg-gray-50 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none appearance-none" onchange="onTurmaNotasChangeCoord()">
-                                            <option value="">Todas as Turmas</option>
-                                        </select>
-                                        <i data-lucide="layers" class="absolute left-3 top-3.5 w-5 h-5 text-gray-400"></i>
+                        <div id="individual-launch-container">
+                            <form id="lancar-nota-form-coord" class="space-y-6">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <!-- Turma Selector -->
+                                    <div>
+                                        <label for="turma-select-notas-coord" class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 ml-1">Turma (Filtro)</label>
+                                        <div class="relative">
+                                            <select id="turma-select-notas-coord" class="w-full p-3.5 pl-10 border border-gray-100 rounded-xl bg-gray-50 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none appearance-none" onchange="onTurmaNotasChangeCoord()">
+                                                <option value="">Todas as Turmas</option>
+                                            </select>
+                                            <i data-lucide="layers" class="absolute left-3 top-3.5 w-5 h-5 text-gray-400"></i>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="disciplina-select-coord" class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 ml-1">Disciplina</label>
+                                        <div class="relative">
+                                            <select id="disciplina-select-coord" class="w-full p-3.5 pl-10 border border-gray-100 rounded-xl bg-white text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none appearance-none" required>
+                                                <option value="">Selecione...</option>
+                                            </select>
+                                            <i data-lucide="book" class="absolute left-3 top-3.5 w-5 h-5 text-gray-400"></i>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="aluno-select-coord" class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 ml-1">Aluno</label>
+                                        <div class="relative">
+                                            <select id="aluno-select-coord" class="w-full p-3.5 pl-10 border border-gray-100 rounded-xl bg-white text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none appearance-none" required>
+                                                <option value="">Selecione...</option>
+                                            </select>
+                                            <i data-lucide="user" class="absolute left-3 top-3.5 w-5 h-5 text-gray-400"></i>
+                                        </div>
                                     </div>
                                 </div>
-                                <div>
-                                    <label for="disciplina-select-coord" class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 ml-1">Disciplina</label>
-                                    <div class="relative">
-                                        <select id="disciplina-select-coord" class="w-full p-3.5 pl-10 border border-gray-100 rounded-xl bg-white text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none appearance-none" required>
-                                            <option value="">Selecione...</option>
-                                        </select>
-                                        <i data-lucide="book" class="absolute left-3 top-3.5 w-5 h-5 text-gray-400"></i>
+
+                                <div class="bg-gradient-to-br from-indigo-50 to-purple-50 p-6 rounded-2xl border border-indigo-100 shadow-inner">
+                                    <div class="flex flex-col md:flex-row items-center gap-6">
+                                        <div class="w-full md:w-32">
+                                            <label for="nota-input-coord" class="block text-sm font-bold text-indigo-900 mb-2 text-center md:text-left">Nota (0-10)</label>
+                                            <input type="number" step="0.1" min="0" max="10" id="nota-input-coord" class="w-full p-4 text-center text-2xl font-black border-2 border-indigo-200 rounded-2xl bg-white focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" placeholder="0.0" required>
+                                        </div>
+                                        <div class="flex-1 w-full gap-3 flex flex-col md:flex-row">
+                                            <button type="submit" class="flex-1 h-[64px] bg-indigo-600 text-white font-bold text-lg rounded-2xl shadow-xl shadow-indigo-500/30 hover:bg-indigo-700 hover:shadow-indigo-500/40 transition-all transform hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3">
+                                                <i data-lucide="check-circle" class="w-6 h-6"></i>
+                                                Lançar Nota
+                                            </button>
+                                            <button type="button" onclick="ativarModoMassa()" class="md:w-48 h-[64px] bg-white border-2 border-indigo-100 text-indigo-600 font-bold text-sm rounded-2xl hover:bg-indigo-50 transition-all flex items-center justify-center gap-2">
+                                                <i data-lucide="layout-grid" class="w-5 h-5"></i>
+                                                Lançar em Massa
+                                            </button>
+                                        </div>
                                     </div>
+                                    <p class="text-[10px] text-indigo-400 mt-4 text-center italic">A nota individual será salva instantaneamente.</p>
                                 </div>
+                            </form>
+                        </div>
+
+                        <!-- MODO LANÇAMENTO EM MASSA (COORD) -->
+                        <div id="mass-launch-container" class="hidden space-y-6 fade-in">
+                            <div class="flex justify-between items-center p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
                                 <div>
-                                    <label for="aluno-select-coord" class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 ml-1">Aluno</label>
-                                    <div class="relative">
-                                        <select id="aluno-select-coord" class="w-full p-3.5 pl-10 border border-gray-100 rounded-xl bg-white text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none appearance-none" required>
-                                            <option value="">Selecione...</option>
-                                        </select>
-                                        <i data-lucide="user" class="absolute left-3 top-3.5 w-5 h-5 text-gray-400"></i>
-                                    </div>
+                                    <h4 id="mass-launch-title" class="font-bold text-indigo-900">Modo de Lançamento em Massa</h4>
+                                    <p id="mass-launch-subtitle" class="text-xs text-indigo-600">Preencha as notas na tabela abaixo.</p>
+                                </div>
+                                <button onclick="desativarModoMassa()" class="px-4 py-2 bg-white text-red-600 text-xs font-bold rounded-xl border border-red-100 hover:bg-red-50 transition">
+                                    Cancelar / Voltar
+                                </button>
+                            </div>
+
+                            <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+                                <div class="max-h-[500px] overflow-y-auto custom-scrollbar">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead class="sticky top-0 bg-gray-50 z-10">
+                                            <tr>
+                                                <th id="mass-th-item" class="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Item</th>
+                                                <th id="mass-th-context" class="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Contexto</th>
+                                                <th class="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-32 border-l">Nota (0-10)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="mass-launch-tbody" class="divide-y divide-gray-100">
+                                            <!-- Injetado via JS -->
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
 
-                            <div class="bg-gradient-to-br from-indigo-50 to-purple-50 p-6 rounded-2xl border border-indigo-100 shadow-inner">
-                                <div class="flex flex-col md:flex-row items-center gap-6">
-                                    <div class="w-full md:w-32">
-                                        <label for="nota-input-coord" class="block text-sm font-bold text-indigo-900 mb-2 text-center md:text-left">Nota (0-10)</label>
-                                        <input type="number" step="0.1" min="0" max="10" id="nota-input-coord" class="w-full p-4 text-center text-2xl font-black border-2 border-indigo-200 rounded-2xl bg-white focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" placeholder="0.0" required>
-                                    </div>
-                                    <div class="flex-1 w-full">
-                                        <button type="submit" class="w-full h-[64px] mt-2 md:mt-7 bg-indigo-600 text-white font-bold text-lg rounded-2xl shadow-xl shadow-indigo-500/30 hover:bg-indigo-700 hover:shadow-indigo-500/40 transition-all transform hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3">
-                                            <i data-lucide="check-circle" class="w-6 h-6"></i>
-                                            Confirmar Lançamento
-                                        </button>
-                                    </div>
-                                </div>
-                                <p class="text-[10px] text-indigo-400 mt-4 text-center italic">A nota será salva instantaneamente para o aluno e disciplina selecionados.</p>
+                            <div class="flex justify-end gap-3">
+                                <button onclick="desativarModoMassa()" class="px-6 py-3 text-gray-500 font-bold hover:text-gray-700 transition">Cancelar</button>
+                                <button id="btn-salvar-massa" onclick="salvarNotasMassa()" class="px-10 py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-xl shadow-indigo-500/30 hover:bg-indigo-700 transition transform hover:-translate-y-1 active:scale-95 flex items-center gap-2">
+                                    <i data-lucide="save" class="w-5 h-5"></i>
+                                    Salvar Todas as Notas
+                                </button>
                             </div>
-                        </form>
+                        </div>
                     </div>
 
                     <!-- GESTÃO DE TURMAS -->
