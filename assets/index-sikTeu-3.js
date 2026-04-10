@@ -3658,8 +3658,10 @@ if (coordDash) {
 // ============ MASS LAUNCH LOGIC (Added by Antigravity) ============
 
 window.ativarModoMassa = async function() {
+    console.log('Botão Modo Massa clicado');
     const turmaId = document.getElementById('turma-select-notas-coord').value;
     const alunoId = document.getElementById('aluno-select-coord').value;
+    console.log('Contexto:', { turmaId, alunoId });
 
     const container = document.getElementById('mass-launch-container');
     const individual = document.getElementById('individual-launch-container');
@@ -3847,3 +3849,11 @@ async function notificarVariasNotasPorEmail(alunoUid, notasArray) {
         console.warn('[Email Massa] Falha no envio:', err);
     }
 }
+
+// Event listener for the mass launch button (Added to ensure it works)
+document.addEventListener('click', (e) => {
+    if (e.target.closest('#btn-modo-massa')) {
+        console.log('Click detectado pelo listener global');
+        ativarModoMassa();
+    }
+});
