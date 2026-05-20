@@ -466,6 +466,23 @@
                 <!-- COLUNA LATERAL - 4 colunas -->
                 <div class="lg:col-span-4 space-y-8">
 
+                    <!-- Cursos EAD -->
+                    <div id="bloco-ead" class="hidden glass-panel p-6 rounded-3xl border-t-4 border-pink-400 fade-in">
+                        <h3 class="text-lg font-bold mb-5 flex items-center gap-2 text-gray-800">
+                            <i data-lucide="monitor-play" class="text-pink-500"></i> Ambiente Virtual (EAD)
+                        </h3>
+                        <a href="./ead/index.html" class="w-full flex items-center justify-between p-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl shadow-lg hover:shadow-indigo-500/30 hover:scale-[1.02] transition group">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 bg-white/20 rounded-lg"><i data-lucide="microscope" class="w-5 h-5"></i></div>
+                                <div class="text-left">
+                                    <p class="font-bold text-sm">Metodologia Científica</p>
+                                    <p class="text-[10px] text-purple-200 uppercase tracking-widest mt-0.5">Acessar Aulas &rarr;</p>
+                                </div>
+                            </div>
+                            <i data-lucide="play-circle" class="w-6 h-6 text-white/70 group-hover:text-white transition"></i>
+                        </a>
+                    </div>
+
                     <!-- Secretaria Virtual (Mantido na lateral) -->
                     <div class="glass-panel p-6 rounded-3xl">
                         <h3 class="text-lg font-bold mb-5 flex items-center gap-2 text-gray-800">
@@ -1473,6 +1490,28 @@
             modal.querySelector('#close-help').onclick = close;
             modal.onclick = (e) => { if (e.target === modal) close(); };
         };
+    </script>
+
+    <!-- INTEGRAÇÃO DE ACESSO AO EAD (Otimizada) -->
+    <script>
+        window.addEventListener('userDataLoaded', () => {
+            const btnEad = document.getElementById("bloco-ead");
+            const userData = window.currentUserData;
+            
+            if (userData && btnEad) {
+                // Checa se a chave existe e está ativada
+                if (userData.cursos_ead && userData.cursos_ead.includes("metodologia")) {
+                    btnEad.classList.remove("hidden");
+                } else {
+                    btnEad.classList.add("hidden");
+                }
+            }
+        });
+        
+        // Fallback caso o listener seja ativado após o carregamento inicial
+        if (window.currentUserData) {
+            window.dispatchEvent(new Event('userDataLoaded'));
+        }
     </script>
 </body>
 

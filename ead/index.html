@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EAD - Metodologia Científica</title>
+    <!-- TailwindCSS e Ícones -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f3f4f6 0%, #e0e7ff 100%);
+            min-height: 100vh;
+        }
+
+        /* Reutilizando as classes Glass do seu Portal Principal */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.90);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 10px 40px -10px rgba(31, 38, 135, 0.15);
+        }
+
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 */
+            height: 0;
+            background: #000;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+            outline: none;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.5); }
+
+        .aula-item.ativa {
+            background: linear-gradient(to right, #f3e8ff, #e0e7ff);
+            border-left: 4px solid #7c3aed;
+        }
+        
+        .opcao-quiz {
+            transition: all 0.2s ease;
+        }
+        .opcao-quiz:hover {
+            border-color: #8b5cf6;
+            background-color: #f5f3ff;
+        }
+        .opcao-quiz.selecionada {
+            border-color: #7c3aed;
+            background-color: #ede9fe;
+            box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+        }
+        .opcao-quiz.correta {
+            border-color: #10b981;
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        .opcao-quiz.errada {
+            border-color: #ef4444;
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+    </style>
+</head>
+<body class="text-gray-800 h-screen flex flex-col p-2 md:p-6 overflow-hidden">
+
+    <!-- Header Principal -->
+    <header class="glass-panel rounded-2xl p-4 mb-4 md:mb-6 flex justify-between items-center shrink-0">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+                <i data-lucide="microscope" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="text-xl md:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-800 to-indigo-800">
+                    Metodologia Científica EAD
+                </h1>
+                <div class="flex items-center gap-3 mt-1">
+                    <p class="text-xs md:text-sm text-gray-500 font-medium">Progresso: <span id="progresso-texto" class="text-indigo-600 font-bold">0%</span></p>
+                    <span class="text-gray-300">|</span>
+                    <p class="text-xs md:text-sm text-gray-500 font-medium">Nota Atual: <span id="nota-texto" class="text-emerald-600 font-bold">10.0</span></p>
+                </div>
+            </div>
+        </div>
+        <a href="../index.html" class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-purple-700 transition">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> <span class="hidden md:inline">Voltar ao Portal</span>
+        </a>
+    </header>
+
+    <!-- Aviso sobre Nota Automática -->
+    <div class="bg-indigo-50/80 backdrop-blur-sm border border-indigo-200 rounded-xl p-3 mb-4 md:mb-6 flex items-start md:items-center gap-3 shadow-sm shrink-0 fade-in">
+        <i data-lucide="info" class="w-5 h-5 text-indigo-600 shrink-0 mt-0.5 md:mt-0"></i>
+        <p class="text-xs md:text-sm text-indigo-900 leading-relaxed">
+            <strong class="font-bold">Atenção:</strong> A nota final desta disciplina começa em 10,0 e é calculada <span class="underline decoration-indigo-300 underline-offset-2">automaticamente</span>. Erros ou lentidão excessiva nas perguntas de fixação reduzirão sua nota.
+        </p>
+    </div>
+
+    <!-- Estrutura Principal (Grid com Sidebar e Conteúdo) -->
+    <div class="flex-1 flex flex-col lg:flex-row gap-6 overflow-hidden">
+        
+        <!-- SIDEBAR: Lista de Aulas -->
+        <aside class="w-full lg:w-80 glass-panel rounded-3xl flex flex-col overflow-hidden shrink-0">
+            <div class="p-5 border-b border-gray-100 bg-white/50">
+                <h2 class="font-bold text-gray-800 flex items-center gap-2">
+                    <i data-lucide="list-video" class="text-indigo-500 w-5 h-5"></i> Módulos
+                </h2>
+            </div>
+            <div class="flex-1 overflow-y-auto p-3" id="lista-aulas">
+                <!-- Aulas serão injetadas via JS -->
+            </div>
+        </aside>
+
+        <!-- ÁREA CENTRAL: Player, PDF e Quiz -->
+        <main class="flex-1 glass-panel rounded-3xl overflow-y-auto flex flex-col">
+            <div class="p-6 md:p-8 max-w-4xl mx-auto w-full">
+                
+                <!-- Div oculta para manter as referências no JS sem quebrar -->
+                <div class="hidden">
+                    <span id="aula-badge"></span>
+                    <h2 id="aula-titulo"></h2>
+                    <div id="status-conclusao"></div>
+                </div>
+
+                <!-- Vídeo (YouTube IFrame) -->
+                <div class="video-container mb-8">
+                    <div id="player-video"></div>
+                </div>
+
+                <!-- Divisor de Conteúdo (Duas Colunas em telas grandes) -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    
+                    <!-- Coluna Esquerda: Material de Apoio -->
+                    <div class="md:col-span-1">
+                        <h3 class="text-sm font-bold uppercase tracking-widest text-gray-400 mb-4 flex items-center gap-2">
+                            <i data-lucide="paperclip" class="w-4 h-4"></i> Material
+                        </h3>
+                        <a href="#" id="btn-pdf" target="_blank" class="w-full group flex items-center p-4 bg-white border border-gray-200 rounded-2xl hover:border-purple-300 hover:shadow-lg transition gap-4">
+                            <div class="w-12 h-12 bg-red-100 text-red-500 rounded-xl flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition">
+                                <i data-lucide="file-text" class="w-6 h-6"></i>
+                            </div>
+                            <div class="text-left">
+                                <p class="font-bold text-gray-800 text-sm">Baixar PDF</p>
+                                <p class="text-xs text-gray-500">Material de Apoio</p>
+                            </div>
+                        </a>
+                    </div>
+
+                    <!-- Coluna Direita: Desafio / Quiz -->
+                    <div class="md:col-span-2">
+                        <h3 class="text-sm font-bold uppercase tracking-widest text-gray-400 mb-4 flex items-center gap-2">
+                            <i data-lucide="brain-circuit" class="w-4 h-4"></i> Desafio de Fixação
+                        </h3>
+                        
+                        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                            <div id="quiz-bloqueado" class="text-center py-6">
+                                <div class="inline-flex w-16 h-16 bg-gray-100 text-gray-400 rounded-full items-center justify-center mb-4">
+                                    <i data-lucide="lock" class="w-8 h-8"></i>
+                                </div>
+                                <h4 class="font-bold text-gray-700">Quiz Bloqueado</h4>
+                                <p class="text-sm text-gray-500 mt-2">Assista o vídeo até o final para liberar a pergunta desta aula.</p>
+                            </div>
+
+                            <div id="quiz-conteudo" class="hidden">
+                                <p id="quiz-pergunta" class="font-bold text-gray-800 text-lg mb-6 leading-relaxed">Qual é a principal característica do método científico?</p>
+                                
+                                <div id="quiz-opcoes" class="space-y-3 mb-6">
+                                    <!-- Botões injetados via JS -->
+                                </div>
+
+                                <button id="btn-responder" disabled class="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-indigo-700 transition shadow-lg shadow-indigo-500/20">
+                                    Confirmar Resposta
+                                </button>
+                                
+                                <p id="quiz-feedback" class="text-center text-sm font-bold mt-4 hidden"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botão Próxima Aula (Aparece ao concluir) -->
+                <div id="container-proxima" class="mt-8 flex justify-end hidden">
+                    <button onclick="proximaAula()" class="px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold rounded-2xl flex items-center gap-3 hover:shadow-lg hover:shadow-purple-500/30 transition transform hover:-translate-y-1">
+                        Ir para a Próxima Aula <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Inicializa ícones do Lucide
+        lucide.createIcons();
+
+        // --- BANCO DE DADOS DAS AULAS (OFICIAL) ---
+        const cursoDados = [
+            {
+                id: 1,
+                titulo: "O que é Ciência e Método Científico?",
+                videoId: "C99RJueNqPM", // Aula 01
+                pdf: "https://drive.google.com/file/d/16BF2Ra_oWZJNoXeWtRoeWo5Rc4FyBE4h/view?usp=sharing",
+                pergunta: "Qual é a etapa inicial fundamental do método científico antes de formular uma hipótese?",
+                opcoes: [
+                    "Apresentar a conclusão em um artigo.",
+                    "Fazer a observação de um fenômeno ou problema.",
+                    "Realizar o experimento em laboratório.",
+                    "Analisar os dados estatísticos finais."
+                ],
+                correta: 1
+            },
+            {
+                id: 2,
+                titulo: "Tipos de Pesquisa e Abordagens",
+                videoId: "APGnlJFXaVk", // Aula 02
+                pdf: "https://drive.google.com/file/d/1hj70-VipxpI9leWydOXHsp_aQ0_I8BT-/view?usp=sharing",
+                pergunta: "Uma pesquisa que busca entender a fundo o comportamento e os sentimentos de um pequeno grupo sem focar em números exatos é classificada como:",
+                opcoes: [
+                    "Pesquisa Quantitativa.",
+                    "Pesquisa Qualitativa.",
+                    "Pesquisa Documental.",
+                    "Pesquisa Experimental."
+                ],
+                correta: 1
+            },
+            {
+                id: 3,
+                titulo: "Como estruturar um TCC (ABNT)",
+                videoId: "tAODJmeADpY", // Aula 03
+                pdf: "https://drive.google.com/file/d/1sPkTSfp8Res1tRNRvnOX-O7rUQ_vmIrM/view?usp=sharing",
+                pergunta: "Segundo as normas da ABNT, qual elemento faz parte dos elementos pré-textuais obrigatórios de um TCC?",
+                opcoes: [
+                    "Introdução.",
+                    "Referências Bibliográficas.",
+                    "Resumo na língua vernácula.",
+                    "Anexos."
+                ],
+                correta: 2
+            },
+            {
+                id: 4,
+                titulo: "Plágio e Ética na Pesquisa",
+                videoId: "pfXlZfjiWqg", // Aula 04
+                pdf: "https://drive.google.com/file/d/1LdSul8dLd06wilEw-8hhLd3vCiI8yZUd/view?usp=sharing",
+                pergunta: "Copiar um trecho de outro autor e colocar no seu texto usando suas próprias palavras sem citar a fonte original configura:",
+                opcoes: [
+                    "Citação Direta.",
+                    "Plágio Integral.",
+                    "Plágio Conceitual / Indireto.",
+                    "Revisão de Literatura ética."
+                ],
+                correta: 2
+            }
+        ];
+
+        // --- ESTADO DO USUÁRIO ---
+        let progressoUsuario = {
+            aulasAssistidas: [], 
+            aulasConcluidas: [], 
+            aulaAtual: 1,
+            tentativas: { 1: 0, 2: 0, 3: 0, 4: 0 },
+            temposDesbloqueio: {},
+            nota: 10.0
+        };
+
+        let opcaoSelecionadaAtual = null;
+
+        // --- API DO YOUTUBE ---
+        var tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        let player;
+        
+        // Função chamada pelo YouTube assim que o script carrega
+        function onYouTubeIframeAPIReady() {
+            init(); // Iniciamos a nossa plataforma EAD
+        }
+
+        // --- FUNÇÕES PRINCIPAIS ---
+        const listaAulasEl = document.getElementById('lista-aulas');
+        const btnResponder = document.getElementById('btn-responder');
+
+        function init() {
+            renderizarMenu();
+            carregarAula(progressoUsuario.aulaAtual);
+            btnResponder.addEventListener('click', verificarResposta);
+        }
+
+        function renderizarMenu() {
+            listaAulasEl.innerHTML = '';
+            cursoDados.forEach((aula, index) => {
+                const isConcluida = progressoUsuario.aulasConcluidas.includes(aula.id);
+                const isAtiva = aula.id === progressoUsuario.aulaAtual;
+                
+                let icon = '<i data-lucide="circle" class="w-5 h-5 text-gray-300"></i>';
+                if (isConcluida) {
+                    icon = '<i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500"></i>';
+                }
+
+                const html = `
+                    <button onclick="carregarAula(${aula.id})" class="aula-item w-full flex items-center gap-3 p-3 mb-2 rounded-xl border border-transparent hover:bg-gray-50 transition text-left ${isAtiva ? 'ativa' : ''}">
+                        <div class="shrink-0 mt-0.5">
+                            ${icon}
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-bold text-gray-800 uppercase tracking-wider mb-0.5">Aula ${index + 1}</p>
+                        </div>
+                    </button>
+                `;
+                listaAulasEl.insertAdjacentHTML('beforeend', html);
+            });
+            lucide.createIcons();
+            atualizarProgressoVisual();
+        }
+
+        function carregarAula(id) {
+            const aula = cursoDados.find(a => a.id === id);
+            if (!aula) return;
+
+            progressoUsuario.aulaAtual = id;
+            opcaoSelecionadaAtual = null;
+
+            // Atualiza Textos
+            document.getElementById('aula-badge').innerText = `Aula ${aula.id}`;
+            document.getElementById('aula-titulo').innerText = aula.titulo;
+            document.getElementById('btn-pdf').href = aula.pdf;
+            
+            // Carrega o Vídeo no YouTube Player
+            if (player) {
+                player.loadVideoById(aula.videoId);
+            } else {
+                player = new YT.Player('player-video', {
+                    videoId: aula.videoId,
+                    playerVars: {
+                        'playsinline': 1,
+                        'rel': 0, // Evita recomendações de outros canais
+                        'modestbranding': 1
+                    },
+                    events: {
+                        'onStateChange': onPlayerStateChange
+                    }
+                });
+            }
+
+            // Configura Quiz
+            document.getElementById('quiz-pergunta').innerText = aula.pergunta;
+            const opcoesContainer = document.getElementById('quiz-opcoes');
+            opcoesContainer.innerHTML = '';
+            
+            aula.opcoes.forEach((opcao, index) => {
+                const btn = document.createElement('button');
+                btn.className = `opcao-quiz w-full text-left p-4 border-2 border-gray-100 rounded-xl font-medium text-gray-700 mb-2`;
+                btn.innerText = opcao;
+                btn.onclick = () => selecionarOpcao(index, btn);
+                opcoesContainer.appendChild(btn);
+            });
+
+            // Gerencia Estado Visual
+            const isAssistida = progressoUsuario.aulasAssistidas.includes(id);
+            const isConcluida = progressoUsuario.aulasConcluidas.includes(id);
+
+            document.getElementById('quiz-feedback').classList.add('hidden');
+            document.getElementById('container-proxima').classList.add('hidden');
+            btnResponder.disabled = true;
+
+            if (isConcluida) {
+                // Já fez tudo
+                document.getElementById('quiz-bloqueado').classList.add('hidden');
+                document.getElementById('quiz-conteudo').classList.remove('hidden');
+                document.getElementById('status-conclusao').classList.remove('hidden');
+                
+                const botoes = opcoesContainer.querySelectorAll('button');
+                botoes.forEach(b => b.disabled = true);
+                botoes[aula.correta].classList.add('correta');
+                
+                btnResponder.classList.add('hidden');
+                document.getElementById('container-proxima').classList.remove('hidden');
+            } else if (isAssistida) {
+                // Assistiu mas não acertou ainda
+                liberarQuiz();
+                document.getElementById('status-conclusao').classList.add('hidden');
+                btnResponder.classList.remove('hidden');
+            } else {
+                // Precisa assistir
+                document.getElementById('quiz-bloqueado').classList.remove('hidden');
+                document.getElementById('quiz-conteudo').classList.add('hidden');
+                document.getElementById('status-conclusao').classList.add('hidden');
+                btnResponder.classList.remove('hidden');
+            }
+
+            renderizarMenu();
+        }
+
+        // Função chamada pelo Player do YT quando muda de estado (pausar, play, fim)
+        function onPlayerStateChange(event) {
+            // YT.PlayerState.ENDED é igual a 0 (quando o vídeo acaba)
+            if (event.data == YT.PlayerState.ENDED) {
+                if (!progressoUsuario.aulasAssistidas.includes(progressoUsuario.aulaAtual)) {
+                    progressoUsuario.aulasAssistidas.push(progressoUsuario.aulaAtual);
+                }
+                liberarQuiz();
+            }
+        }
+
+        function liberarQuiz() {
+            document.getElementById('quiz-bloqueado').classList.add('hidden');
+            document.getElementById('quiz-conteudo').classList.remove('hidden');
+
+            // Salva o momento que liberou para calcular se demorou para responder (penalidade de tempo)
+            if (!progressoUsuario.temposDesbloqueio[progressoUsuario.aulaAtual]) {
+                progressoUsuario.temposDesbloqueio[progressoUsuario.aulaAtual] = Date.now();
+            }
+        }
+
+        function selecionarOpcao(index, botaoEl) {
+            if (progressoUsuario.aulasConcluidas.includes(progressoUsuario.aulaAtual)) return;
+            
+            opcaoSelecionadaAtual = index;
+            document.querySelectorAll('.opcao-quiz').forEach(b => b.classList.remove('selecionada'));
+            botaoEl.classList.add('selecionada');
+            btnResponder.disabled = false;
+        }
+
+        function verificarResposta() {
+            const aula = cursoDados.find(a => a.id === progressoUsuario.aulaAtual);
+            const feedbackEl = document.getElementById('quiz-feedback');
+            const botoes = document.getElementById('quiz-opcoes').querySelectorAll('button');
+
+            feedbackEl.classList.remove('hidden', 'text-emerald-600', 'text-red-600');
+
+            if (opcaoSelecionadaAtual === aula.correta) {
+                // ACERTOU
+                feedbackEl.innerText = "🎉 Resposta Correta! Aula concluída com sucesso.";
+                feedbackEl.classList.add('text-emerald-600');
+                
+                botoes[opcaoSelecionadaAtual].classList.remove('selecionada');
+                botoes[opcaoSelecionadaAtual].classList.add('correta');
+                
+                botoes.forEach(b => b.disabled = true);
+                btnResponder.classList.add('hidden');
+                
+                if (!progressoUsuario.aulasConcluidas.includes(aula.id)) {
+                    // --- CÁLCULO DA NOTA AUTOMÁTICA ---
+                    let penalidade = 0;
+                    
+                    // Se errou alguma vez nesta aula (cai 0.375 pontos. Se errar 1x em cada uma das 4, perde 1.5, caindo de 10 pra 8.5)
+                    if (progressoUsuario.tentativas[aula.id] > 0) {
+                        penalidade += 0.375;
+                    }
+
+                    // Se demorou mais de 5 minutos entre o vídeo liberar a pergunta e responder
+                    const tempoDesbloqueio = progressoUsuario.temposDesbloqueio[aula.id] || Date.now();
+                    const minutosDemora = (Date.now() - tempoDesbloqueio) / 1000 / 60;
+                    if (minutosDemora > 5) {
+                        penalidade += 0.1; // Perde 0.1 décimo por demora
+                    }
+
+                    progressoUsuario.nota -= penalidade;
+                    atualizarNotaVisual();
+                    // ------------------------------------
+
+                    progressoUsuario.aulasConcluidas.push(aula.id);
+                    console.log("Progresso salvo no banco:", progressoUsuario);
+                }
+
+                document.getElementById('status-conclusao').classList.remove('hidden');
+                document.getElementById('container-proxima').classList.remove('hidden');
+                
+                renderizarMenu();
+            } else {
+                // ERROU
+                progressoUsuario.tentativas[progressoUsuario.aulaAtual]++;
+                
+                feedbackEl.innerText = "❌ Resposta incorreta. Revise o conteúdo do vídeo e tente novamente.";
+                feedbackEl.classList.add('text-red-600');
+                
+                botoes[opcaoSelecionadaAtual].classList.remove('selecionada');
+                botoes[opcaoSelecionadaAtual].classList.add('errada');
+                
+                setTimeout(() => {
+                    botoes[opcaoSelecionadaAtual].classList.remove('errada');
+                }, 2000);
+            }
+        }
+
+        function proximaAula() {
+            const indexAtual = cursoDados.findIndex(a => a.id === progressoUsuario.aulaAtual);
+            if (indexAtual < cursoDados.length - 1) {
+                carregarAula(cursoDados[indexAtual + 1].id);
+            } else {
+                alert("Parabéns! Você concluiu todas as aulas de Metodologia Científica!");
+            }
+        }
+
+        function atualizarProgressoVisual() {
+            const porcentagem = Math.round((progressoUsuario.aulasConcluidas.length / cursoDados.length) * 100);
+            document.getElementById('progresso-texto').innerText = `${porcentagem}%`;
+        }
+
+        function atualizarNotaVisual() {
+            // Garante que a nota não fique menor que 0
+            if (progressoUsuario.nota < 0) progressoUsuario.nota = 0;
+            
+            const notaFormatada = progressoUsuario.nota.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+            const notaTextoEl = document.getElementById('nota-texto');
+            notaTextoEl.innerText = notaFormatada;
+            
+            // Muda cor dependendo da nota
+            if (progressoUsuario.nota >= 9) {
+                notaTextoEl.className = "text-emerald-600 font-bold";
+            } else if (progressoUsuario.nota >= 7) {
+                notaTextoEl.className = "text-yellow-600 font-bold";
+            } else {
+                notaTextoEl.className = "text-red-600 font-bold";
+            }
+        }
+
+    </script>
+</body>
+</html>

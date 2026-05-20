@@ -116,7 +116,7 @@ $e(P, async (a) => {
       const e = L(u, "utilizadores", a.uid),
         t = await _(e);
       if (t.exists()) {
-        ((I = { id: a.uid, ...t.data() }), await Me());
+        ((I = { id: a.uid, ...t.data() }), window.currentUserData = I, window.dispatchEvent(new Event('userDataLoaded')), await Me());
         const o = I.cursos || [];
         if (o.length === 0) {
           (j("login"),
