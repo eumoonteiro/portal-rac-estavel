@@ -66,7 +66,8 @@
     <!-- Script de Integração Direta com Firebase -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, updateDoc, query, where, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // Chaves Extraídas do Ambiente Atual
         const firebaseConfig = {
@@ -78,8 +79,9 @@
             appId: "1:844052242861:web:03aff23e67ec52c07fc124",
         };
 
-        const app = initializeApp(firebaseConfig, "AppAdminEAD");
+        const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
         async function carregarAlunos() {
             try {
@@ -162,8 +164,33 @@
             }
         }
 
-        // Inicia
-        carregarAlunos();
+        // Configura ouvinte de estado de autenticação para segurança e persistência de sessão
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                try {
+                    const userDocRef = doc(db, "utilizadores", user.uid);
+                    const userDoc = await getDoc(userDocRef);
+                    if (userDoc.exists()) {
+                        const data = userDoc.data();
+                        if (data.role === "coordenador") {
+                            // Carrega a lista de alunos
+                            await carregarAlunos();
+                            return;
+                        }
+                    }
+                    // Se não for coordenador
+                    alert("Acesso restrito para coordenadores.");
+                    window.location.href = "index.html";
+                } catch (e) {
+                    console.error("Erro ao verificar permissão do usuário:", e);
+                    document.getElementById("loading").innerHTML = '<p class="text-red-500 font-bold">Erro de permissão ou rede ao verificar usuário.</p>';
+                }
+            } else {
+                // Redireciona se não autenticado
+                window.location.href = "index.html";
+            }
+        });
+
         lucide.createIcons();
     </script>
 </body>
