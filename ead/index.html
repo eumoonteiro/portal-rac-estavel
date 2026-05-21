@@ -82,6 +82,17 @@
 </head>
 <body class="text-gray-800 h-screen flex flex-col p-2 md:p-6 overflow-hidden">
 
+    <!-- Overlay de Carregamento -->
+    <div id="ead-loading-overlay" class="fixed inset-0 bg-white/95 backdrop-blur-md z-50 flex flex-col items-center justify-center">
+        <div class="p-8 text-center flex flex-col items-center">
+            <div class="w-16 h-16 bg-gradient-to-tr from-purple-500 to-indigo-500 rounded-2xl flex items-center justify-center text-white mb-4 shadow-lg animate-pulse">
+                <i data-lucide="graduation-cap" class="w-8 h-8"></i>
+            </div>
+            <i data-lucide="loader-2" class="w-8 h-8 text-indigo-600 animate-spin mb-4"></i>
+            <p class="text-gray-600 font-semibold">Carregando seu progresso...</p>
+        </div>
+    </div>
+
     <!-- Header Principal -->
     <header class="glass-panel rounded-2xl p-4 mb-4 md:mb-6 flex justify-between items-center shrink-0">
         <div class="flex items-center gap-4">
@@ -206,9 +217,31 @@
     </div>
 
     <!-- Scripts -->
-    <script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
         // Inicializa ícones do Lucide
         lucide.createIcons();
+
+        // Chaves Extraídas do Ambiente Atual
+        const firebaseConfig = {
+            apiKey: "AIzaSyBI_PS9poJyyCrGgTXaU82xNoEGCh6jFK0",
+            authDomain: "portal-rac.firebaseapp.com",
+            projectId: "portal-rac",
+            storageBucket: "portal-rac.firebasestorage.app",
+            messagingSenderId: "844052242861",
+            appId: "1:844052242861:web:03aff23e67ec52c07fc124",
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let currentUser = null;
+        let isYouTubeReady = false;
+        let isAuthChecked = false;
 
         // --- BANCO DE DADOS DAS AULAS (OFICIAL) ---
         const cursoDados = [
@@ -292,14 +325,27 @@
         
         // Função chamada pelo YouTube assim que o script carrega
         function onYouTubeIframeAPIReady() {
-            init(); // Iniciamos a nossa plataforma EAD
+            isYouTubeReady = true;
+            checkReady();
         }
 
         // --- FUNÇÕES PRINCIPAIS ---
         const listaAulasEl = document.getElementById('lista-aulas');
         const btnResponder = document.getElementById('btn-responder');
 
+        function checkReady() {
+            if (isYouTubeReady && isAuthChecked) {
+                init();
+            }
+        }
+
         function init() {
+            // Remove o overlay de carregamento
+            const overlay = document.getElementById('ead-loading-overlay');
+            if (overlay) {
+                overlay.classList.add('hidden');
+            }
+
             renderizarMenu();
             carregarAula(progressoUsuario.aulaAtual);
             btnResponder.addEventListener('click', verificarResposta);
@@ -416,6 +462,7 @@
             if (event.data == YT.PlayerState.ENDED) {
                 if (!progressoUsuario.aulasAssistidas.includes(progressoUsuario.aulaAtual)) {
                     progressoUsuario.aulasAssistidas.push(progressoUsuario.aulaAtual);
+                    salvarProgressoNoBanco();
                 }
                 liberarQuiz();
             }
@@ -428,6 +475,7 @@
             // Salva o momento que liberou para calcular se demorou para responder (penalidade de tempo)
             if (!progressoUsuario.temposDesbloqueio[progressoUsuario.aulaAtual]) {
                 progressoUsuario.temposDesbloqueio[progressoUsuario.aulaAtual] = Date.now();
+                salvarProgressoNoBanco();
             }
         }
 
@@ -479,16 +527,17 @@
                     // ------------------------------------
 
                     progressoUsuario.aulasConcluidas.push(aula.id);
-                    console.log("Progresso salvo no banco:", progressoUsuario);
                 }
 
                 document.getElementById('status-conclusao').classList.remove('hidden');
                 document.getElementById('container-proxima').classList.remove('hidden');
                 
+                salvarProgressoNoBanco();
                 renderizarMenu();
             } else {
                 // ERROU
                 progressoUsuario.tentativas[progressoUsuario.aulaAtual]++;
+                salvarProgressoNoBanco();
                 
                 feedbackEl.innerText = "❌ Resposta incorreta. Revise o conteúdo do vídeo e tente novamente.";
                 feedbackEl.classList.add('text-red-600');
@@ -506,6 +555,7 @@
             const indexAtual = cursoDados.findIndex(a => a.id === progressoUsuario.aulaAtual);
             if (indexAtual < cursoDados.length - 1) {
                 carregarAula(cursoDados[indexAtual + 1].id);
+                salvarProgressoNoBanco();
             } else {
                 alert("Parabéns! Você concluiu todas as aulas de Metodologia Científica!");
             }
@@ -533,6 +583,68 @@
                 notaTextoEl.className = "text-red-600 font-bold";
             }
         }
+
+        // --- INTEGRAÇÃO COM BANCO DE DADOS (FIRESTORE) ---
+        async function salvarProgressoNoBanco() {
+            if (!currentUser) return;
+            try {
+                const userDocRef = doc(db, "utilizadores", currentUser.uid);
+                await updateDoc(userDocRef, {
+                    progresso_ead: progressoUsuario
+                });
+                console.log("Progresso salvo no banco:", progressoUsuario);
+            } catch (err) {
+                console.error("Erro ao salvar progresso:", err);
+            }
+        }
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                try {
+                    const userDocRef = doc(db, "utilizadores", user.uid);
+                    const userDoc = await getDoc(userDocRef);
+                    if (userDoc.exists()) {
+                        const data = userDoc.data();
+                        
+                        // Validar se o aluno tem acesso liberado
+                        const temAcesso = data.cursos_ead && data.cursos_ead.includes("metodologia");
+                        if (!temAcesso && data.role === "aluno") {
+                            alert("Você não tem permissão para acessar esta disciplina EAD.");
+                            window.location.href = "../index.html";
+                            return;
+                        }
+
+                        // Carregar progresso salvo
+                        if (data.progresso_ead) {
+                            const salvo = data.progresso_ead;
+                            progressoUsuario = {
+                                aulasAssistidas: salvo.aulasAssistidas || [],
+                                aulasConcluidas: salvo.aulasConcluidas || [],
+                                aulaAtual: salvo.aulaAtual || 1,
+                                tentativas: salvo.tentativas || { 1: 0, 2: 0, 3: 0, 4: 0 },
+                                temposDesbloqueio: salvo.temposDesbloqueio || {},
+                                nota: salvo.nota !== undefined ? salvo.nota : 10.0
+                            };
+                        }
+                    }
+                    atualizarNotaVisual();
+                } catch (e) {
+                    console.error("Erro ao obter dados do usuário:", e);
+                }
+                
+                isAuthChecked = true;
+                checkReady();
+            } else {
+                // Redireciona se não autenticado
+                window.location.href = "../index.html";
+            }
+        });
+
+        // Expõe funções para o escopo global (inline event handlers)
+        window.carregarAula = carregarAula;
+        window.proximaAula = proximaAula;
+        window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
 
     </script>
 </body>
