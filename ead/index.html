@@ -321,12 +321,85 @@
         var firstScriptTag = document.getElementsByTagName('script')[0];
         firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
-        let player;
+        let player = null;
         
         // Função chamada pelo YouTube assim que o script carrega
         function onYouTubeIframeAPIReady() {
             isYouTubeReady = true;
-            checkReady();
+            if (isAuthChecked && !player) {
+                const aula = cursoDados.find(a => a.id === progressoUsuario.aulaAtual);
+                if (aula) {
+                    inicializarPlayer(aula.videoId);
+                }
+            }
+        }
+
+        // Tenta detectar se a API do YT já está pronta (caso tenha carregado antes do script type="module" rodar)
+        function verificarSeYTPronto() {
+            if (typeof YT !== 'undefined' && YT.Player && !isYouTubeReady) {
+                isYouTubeReady = true;
+                if (isAuthChecked && !player) {
+                    const aula = cursoDados.find(a => a.id === progressoUsuario.aulaAtual);
+                    if (aula) {
+                        inicializarPlayer(aula.videoId);
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
+
+        // Executa verificação inicial imediata
+        verificarSeYTPronto();
+
+        // Polling para garantir caso o script termine de carregar mas o callback não seja disparado
+        const ytPollInterval = setInterval(() => {
+            if (verificarSeYTPronto() || isYouTubeReady) {
+                clearInterval(ytPollInterval);
+            }
+        }, 500);
+
+        // Limita o polling para no máximo 10 segundos
+        setTimeout(() => {
+            clearInterval(ytPollInterval);
+            // Se após 10 segundos ainda não carregou, exibe aviso amigável no lugar do player
+            if (!isYouTubeReady && !player) {
+                const container = document.querySelector('.video-container');
+                if (container) {
+                    container.innerHTML = `
+                        <div class="flex flex-col items-center justify-center absolute inset-0 bg-gray-900 text-white p-6 text-center">
+                            <i data-lucide="video-off" class="w-10 h-10 text-red-500 mb-2"></i>
+                            <p class="font-bold">Player de vídeo indisponível</p>
+                            <p class="text-xs text-gray-400 mt-2 max-w-sm mx-auto">Não foi possível carregar o player do YouTube. Se você usa um bloqueador de anúncios ou rastreamento (como no Safari), tente desativá-lo para esta página.</p>
+                        </div>
+                    `;
+                    lucide.createIcons();
+                }
+            }
+        }, 10000);
+
+        function inicializarPlayer(videoId) {
+            if (typeof YT !== 'undefined' && YT.Player) {
+                const container = document.querySelector('.video-container');
+                if (container) {
+                    container.innerHTML = '<div id="player-video"></div>'; // Recria a div limpa para o player do YouTube usar
+                }
+                try {
+                    player = new YT.Player('player-video', {
+                        videoId: videoId,
+                        playerVars: {
+                            'playsinline': 1,
+                            'rel': 0, // Evita recomendações de outros canais
+                            'modestbranding': 1
+                        },
+                        events: {
+                            'onStateChange': onPlayerStateChange
+                        }
+                    });
+                } catch (e) {
+                    console.error("Erro ao instanciar YT.Player:", e);
+                }
+            }
         }
 
         // --- FUNÇÕES PRINCIPAIS ---
@@ -334,7 +407,7 @@
         const btnResponder = document.getElementById('btn-responder');
 
         function checkReady() {
-            if (isYouTubeReady && isAuthChecked) {
+            if (isAuthChecked) {
                 init();
             }
         }
@@ -391,20 +464,28 @@
             document.getElementById('btn-pdf').href = aula.pdf;
             
             // Carrega o Vídeo no YouTube Player
-            if (player) {
-                player.loadVideoById(aula.videoId);
+            if (player && typeof player.loadVideoById === 'function') {
+                try {
+                    player.loadVideoById(aula.videoId);
+                } catch (err) {
+                    console.error("Erro ao carregar vídeo:", err);
+                    inicializarPlayer(aula.videoId);
+                }
+            } else if (typeof YT !== 'undefined' && YT.Player) {
+                inicializarPlayer(aula.videoId);
             } else {
-                player = new YT.Player('player-video', {
-                    videoId: aula.videoId,
-                    playerVars: {
-                        'playsinline': 1,
-                        'rel': 0, // Evita recomendações de outros canais
-                        'modestbranding': 1
-                    },
-                    events: {
-                        'onStateChange': onPlayerStateChange
-                    }
-                });
+                // Mostra placeholder de carregamento do player
+                const container = document.querySelector('.video-container');
+                if (container) {
+                    container.innerHTML = `
+                        <div class="flex flex-col items-center justify-center absolute inset-0 bg-gray-900 text-white p-4 text-center">
+                            <i data-lucide="loader-2" class="w-8 h-8 text-purple-500 animate-spin mb-2"></i>
+                            <p class="text-sm font-medium">Carregando player de vídeo...</p>
+                            <p class="text-xs text-gray-400 mt-1 max-w-xs mx-auto">Se o player demorar para carregar, certifique-se de que os cookies/rastreadores não estão bloqueados.</p>
+                        </div>
+                    `;
+                    lucide.createIcons();
+                }
             }
 
             // Configura Quiz
@@ -459,7 +540,8 @@
         // Função chamada pelo Player do YT quando muda de estado (pausar, play, fim)
         function onPlayerStateChange(event) {
             // YT.PlayerState.ENDED é igual a 0 (quando o vídeo acaba)
-            if (event.data == YT.PlayerState.ENDED) {
+            const endedState = (typeof YT !== 'undefined' && YT.PlayerState) ? YT.PlayerState.ENDED : 0;
+            if (event.data == endedState) {
                 if (!progressoUsuario.aulasAssistidas.includes(progressoUsuario.aulaAtual)) {
                     progressoUsuario.aulasAssistidas.push(progressoUsuario.aulaAtual);
                     salvarProgressoNoBanco();
