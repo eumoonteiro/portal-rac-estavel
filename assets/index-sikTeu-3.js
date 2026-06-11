@@ -326,7 +326,8 @@ async function be() {
   e.innerHTML =
     '<p class="p-8 text-center text-gray-400">Carregando alunos e histórico...</p>';
   let o = [],
-    s = {};
+    s = {},
+    notasSnap = null;
   try {
     // Check if a turma is selected
     const turmaSelect = document.getElementById('turma-select-chamada');
@@ -351,6 +352,7 @@ async function be() {
       ),
       D($(C(u, "notas"), v("cursoId", "==", t), v("disciplina", "==", a))),
     ]);
+    notasSnap = d;
     r.forEach((c) => {
       const alunoData = { id: c.id, ...c.data() };
       // If turma filter active, only include students from that turma
@@ -1169,42 +1171,83 @@ async function ze(a) {
   const e = document.getElementById("turmas-container");
   if (!e) return;
   e.innerHTML = "<p>A analisar...</p>";
-  const t = $(C(u, "notas"), v("cursoId", "==", a)),
-    o = await D(t);
-  if (o.empty) {
-    e.innerHTML = "<p>Não há dados de notas para este curso.</p>";
-    return;
+  
+  try {
+    const [turmasSnap, notasSnap] = await Promise.all([
+      D($(C(u, "turmas"), v("cursoId", "==", a))),
+      D($(C(u, "notas"), v("cursoId", "==", a)))
+    ]);
+    
+    if (turmasSnap.empty) {
+      e.innerHTML = "<p>Não há dados de turmas para este curso.</p>";
+      return;
+    }
+    
+    const notas = [];
+    notasSnap.forEach((doc) => {
+      notas.push({ id: doc.id, ...doc.data() });
+    });
+    
+    e.innerHTML = "";
+    
+    const turmas = [];
+    turmasSnap.forEach((doc) => {
+      turmas.push({ id: doc.id, ...doc.data() });
+    });
+    
+    // Ordenar turmas por nome da disciplina e nome da turma
+    turmas.sort((t1, t2) => {
+      const cmp = (t1.disciplinaNome || "").localeCompare(t2.disciplinaNome || "");
+      if (cmp !== 0) return cmp;
+      return (t1.nome || "").localeCompare(t2.nome || "");
+    });
+    
+    turmas.forEach((turma) => {
+      const turmaAlunos = new Set(turma.alunos || []);
+      const turmaNotas = notas.filter(
+        (n) => n.disciplina === turma.disciplinaNome && turmaAlunos.has(n.alunoUid)
+      );
+      
+      let aprovados = 0;
+      let reprovados = 0;
+      const notasValores = [];
+      
+      turmaNotas.forEach((n) => {
+        if (n.nota != null) {
+          notasValores.push(n.nota);
+          if (n.nota >= 6) aprovados++;
+          else reprovados++;
+        }
+      });
+      
+      const totalAlunos = turma.alunos ? turma.alunos.length : 0;
+      const media = notasValores.length > 0
+        ? (notasValores.reduce((acc, curr) => acc + curr, 0) / notasValores.length).toFixed(1)
+        : "0.0";
+        
+      const c = document.createElement("div");
+      c.className = "p-4 bg-gray-50 rounded-lg border-l-4 border-purple-400 mb-3";
+      c.innerHTML = `
+          <h4 class="font-bold text-base md:text-lg">${turma.disciplinaNome} — ${turma.nome} <span class="text-xs text-gray-500 font-normal">(${turma.periodo})</span></h4>
+          <div class="mt-2 flex flex-wrap justify-between items-center text-sm gap-2">
+              <span><i data-lucide="users" class="inline-block w-4 h-4 mr-1"></i>${totalAlunos} Alunos</span>
+              <span><i data-lucide="graduation-cap" class="inline-block w-4 h-4 mr-1"></i>Média: <strong>${media}</strong></span>
+              <span class="text-green-600"><i data-lucide="check-circle" class="inline-block w-4 h-4 mr-1"></i>${aprovados}</span>
+              <span class="text-red-600"><i data-lucide="x-circle" class="inline-block w-4 h-4 mr-1"></i>${reprovados}</span>
+          </div>
+          <div class="mt-4 flex gap-2">
+              <button class="flex-1 text-sm bg-white border border-gray-300 py-2 px-3 rounded-lg hover:bg-gray-100 transition view-grades-btn" data-turma-id="${turma.id}">Ver Notas</button>
+              <button class="flex-1 text-sm bg-purple-600 text-white py-2 px-3 rounded-lg hover:bg-purple-700 transition generate-report-btn" data-turma-id="${turma.id}">Gerar Relatório PDF</button>
+          </div>
+      `;
+      e.appendChild(c);
+    });
+    
+    lucide.createIcons();
+  } catch (err) {
+    console.error("Erro ao analisar desempenho por turma:", err);
+    e.innerHTML = "<p class='text-red-500'>Erro ao carregar os desempenhos.</p>";
   }
-  const s = {};
-  (o.forEach((n) => {
-    const { disciplina: r, nota: d } = n.data();
-    (s[r] || (s[r] = { notas: [], aprovados: 0, reprovados: 0 }),
-      s[r].notas.push(d),
-      d >= 6 ? s[r].aprovados++ : s[r].reprovados++);
-  }),
-    (e.innerHTML = ""));
-  for (const n in s) {
-    const r = s[n],
-      d = r.notas.length,
-      i = d > 0 ? (r.notas.reduce((l, w) => l + w, 0) / d).toFixed(1) : 0,
-      c = document.createElement("div");
-    ((c.className = "p-4 bg-gray-50 rounded-lg border-l-4 border-purple-400"),
-      (c.innerHTML = `
-                    <h4 class="font-bold text-lg">${n}</h4>
-                    <div class="mt-2 flex flex-wrap justify-between items-center text-sm gap-2">
-                        <span><i data-lucide="users" class="inline-block w-4 h-4 mr-1"></i>${d} Alunos</span>
-                        <span><i data-lucide="graduation-cap" class="inline-block w-4 h-4 mr-1"></i>Média: <strong>${i}</strong></span>
-                        <span class="text-green-600"><i data-lucide="check-circle" class="inline-block w-4 h-4 mr-1"></i>${r.aprovados}</span>
-                        <span class="text-red-600"><i data-lucide="x-circle" class="inline-block w-4 h-4 mr-1"></i>${r.reprovados}</span>
-                    </div>
-                    <div class="mt-4 flex gap-2">
-                        <button class="flex-1 text-sm bg-white border border-gray-300 py-2 px-3 rounded-lg hover:bg-gray-100 transition view-grades-btn" data-disciplina="${n}">Ver Notas</button>
-                        <button class="flex-1 text-sm bg-purple-600 text-white py-2 px-3 rounded-lg hover:bg-purple-700 transition generate-report-btn" data-disciplina="${n}">Gerar Relatório PDF</button>
-                    </div>
-                `),
-      e.appendChild(c));
-  }
-  lucide.createIcons();
 }
 const X = document.getElementById("notas-modal");
 X?.addEventListener("click", (a) => {
@@ -1215,13 +1258,13 @@ document
   .getElementById("coordenador-dashboard")
   ?.addEventListener("click", (a) => {
     const e = a.target.closest(".view-grades-btn");
-    e?.dataset.disciplina && Ue(e.dataset.disciplina);
+    e?.dataset.turmaId && Ue(e.dataset.turmaId);
     const t = a.target.closest(".generate-report-btn");
-    if (t?.dataset.disciplina) {
+    if (t?.dataset.turmaId) {
       const n = t.innerHTML;
       ((t.innerHTML = "Gerando..."),
         (t.disabled = !0),
-        Ve(t.dataset.disciplina).finally(() => {
+        Ve(t.dataset.turmaId).finally(() => {
           ((t.innerHTML = n), (t.disabled = !1));
         }));
     }
@@ -1248,36 +1291,54 @@ document
       _e(r);
     }
   });
-async function Ue(a) {
+async function Ue(turmaId) {
   const e = document.getElementById("modal-title"),
     t = document.getElementById("modal-notas-tbody");
-  ((e.textContent = `Notas de ${a}`),
+  ((e.textContent = "Carregando..."),
     (t.innerHTML =
       '<tr><td colspan="3" class="text-center p-4">A carregar...</td></tr>'),
     X.classList.remove("hidden"));
-  const o = $(C(u, "notas"), v("disciplina", "==", a), v("cursoId", "==", y)),
-    s = await D(o),
-    n = [];
-  (await le(),
-    s.forEach((r) => {
-      const d = r.data(),
-        i = R.get(d.alunoUid);
-      n.push({ ...d, alunoNome: i?.nome || "Não encontrado" });
-    }),
-    n.sort((r, d) => r.alunoNome.localeCompare(d.alunoNome)),
-    (t.innerHTML = ""),
-    n.length === 0
-      ? (t.innerHTML =
-        '<tr><td colspan="3" class="text-center p-4">Nenhum aluno nesta disciplina.</td></tr>')
-      : n.forEach((r) => {
-        const notaVal = r.nota != null ? r.nota : null,
-          d = notaVal != null ? (notaVal >= 6 ? "Aprovado" : "Reprovado") : "Sem nota",
-          i =
-            d === "Aprovado"
-              ? "bg-green-100 text-green-700"
-              : d === "Reprovado" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600";
-        t.innerHTML += `<tr class="border-b"><td class="p-2">${r.alunoNome}</td><td class="p-2">${notaVal != null ? notaVal.toFixed(1) : '-'}</td><td class="p-2"><span class="px-2 py-1 text-xs font-semibold rounded-full ${i}">${d}</span></td></tr>`;
-      }));
+  try {
+    const turmaDoc = await _(L(u, "turmas", turmaId));
+    if (!turmaDoc.exists()) {
+      e.textContent = "Erro";
+      t.innerHTML = '<tr><td colspan="3" class="text-center p-4 text-red-500">Turma não encontrada.</td></tr>';
+      return;
+    }
+    const turmaData = turmaDoc.data();
+    e.textContent = `Notas de ${turmaData.disciplinaNome} — ${turmaData.nome}`;
+    
+    const o = $(C(u, "notas"), v("disciplina", "==", turmaData.disciplinaNome), v("cursoId", "==", y)),
+      s = await D(o),
+      n = [],
+      turmaAlunos = new Set(turmaData.alunos || []);
+    (await le(),
+      s.forEach((r) => {
+        const d = r.data();
+        if (turmaAlunos.has(d.alunoUid)) {
+          const i = R.get(d.alunoUid);
+          n.push({ ...d, alunoNome: i?.nome || "Não encontrado" });
+        }
+      }),
+      n.sort((r, d) => r.alunoNome.localeCompare(d.alunoNome)),
+      (t.innerHTML = ""),
+      n.length === 0
+        ? (t.innerHTML =
+          '<tr><td colspan="3" class="text-center p-4">Nenhum aluno com notas nesta turma.</td></tr>')
+        : n.forEach((r) => {
+          const notaVal = r.nota != null ? r.nota : null,
+            d = notaVal != null ? (notaVal >= 6 ? "Aprovado" : "Reprovado") : "Sem nota",
+            i =
+              d === "Aprovado"
+                ? "bg-green-100 text-green-700"
+                : d === "Reprovado" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600";
+          t.innerHTML += `<tr class="border-b"><td class="p-2">${r.alunoNome}</td><td class="p-2">${notaVal != null ? notaVal.toFixed(1) : '-'}</td><td class="p-2"><span class="px-2 py-1 text-xs font-semibold rounded-full ${i}">${d}</span></td></tr>`;
+        }));
+  } catch (err) {
+    console.error("Erro ao carregar notas da turma:", err);
+    e.textContent = "Erro";
+    t.innerHTML = '<tr><td colspan="3" class="text-center p-4 text-red-500">Erro ao carregar dados.</td></tr>';
+  }
 }
 function Oe() {
   const a = document.getElementById("editar-aluno-modal"),
@@ -1577,52 +1638,67 @@ function Ge(a) {
         );
     }));
 }
-async function Ve(a) {
+async function Ve(turmaId) {
   const { jsPDF: e } = window.jspdf,
     t = new e();
   try {
+    const turmaDoc = await _(L(u, "turmas", turmaId));
+    if (!turmaDoc.exists()) {
+      f("Turma não encontrada.", "error");
+      return;
+    }
+    const turmaData = turmaDoc.data();
+    const disciplina = turmaData.disciplinaNome;
+    const turmaNome = turmaData.nome;
+    const periodo = turmaData.periodo;
+
     await le();
-    const o = $(C(u, "notas"), v("disciplina", "==", a), v("cursoId", "==", y)),
+    const o = $(C(u, "notas"), v("disciplina", "==", disciplina), v("cursoId", "==", y)),
       s = await D(o),
-      n = [];
-    (s.forEach((d) => {
-      const i = d.data(),
-        l = R.get(i.alunoUid)?.nome || "Aluno não encontrado",
-        notaV = i.nota != null ? i.nota : null,
-        w = notaV != null ? (notaV >= 6 ? "Aprovado" : "Reprovado") : "Sem nota",
-        b = i.lancadoPor || "N/A",
-        m = i.atualizadaEm
-          ? new Date(i.atualizadaEm.seconds * 1e3).toLocaleString("pt-BR")
-          : "N/A";
-      n.push([l, notaV != null ? notaV.toFixed(1) : '-', w, b, m]);
-    }),
-      n.sort((d, i) => d[0].localeCompare(i[0])));
+      n = [],
+      turmaAlunos = new Set(turmaData.alunos || []);
+
+    s.forEach((d) => {
+      const i = d.data();
+      if (turmaAlunos.has(i.alunoUid)) {
+        const l = R.get(i.alunoUid)?.nome || "Aluno não encontrado",
+          notaV = i.nota != null ? i.nota : null,
+          w = notaV != null ? (notaV >= 6 ? "Aprovado" : "Reprovado") : "Sem nota",
+          b = i.lancadoPor || "N/A",
+          m = i.atualizadaEm
+            ? new Date(i.atualizadaEm.seconds * 1e3).toLocaleString("pt-BR")
+            : "N/A";
+        n.push([l, notaV != null ? notaV.toFixed(1) : '-', w, b, m]);
+      }
+    });
+    n.sort((d, i) => d[0].localeCompare(i[0]));
     const r = new Date().toLocaleDateString("pt-BR");
-    (t.setFontSize(18),
-      t.text("Relatório de Notas", 14, 22),
-      t.setFontSize(12),
-      t.text(`Disciplina: ${a}`, 14, 30),
-      t.text(`Curso: ${F.get(y)?.nome || "N/A"}`, 14, 36),
-      t.text(`Gerado em: ${r}`, 14, 42),
-      t.autoTable({
-        startY: 50,
-        head: [
-          [
-            "Aluno",
-            "Nota Final",
-            "Status",
-            "Lançado Por",
-            "Data do Lançamento",
-          ],
+    t.setFontSize(18);
+    t.text("Relatório de Notas", 14, 22);
+    t.setFontSize(12);
+    t.text(`Disciplina: ${disciplina}`, 14, 30);
+    t.text(`Turma: ${turmaNome} (${periodo})`, 14, 36);
+    t.text(`Curso: ${F.get(y)?.nome || "N/A"}`, 14, 42);
+    t.text(`Gerado em: ${r}`, 14, 48);
+    t.autoTable({
+      startY: 55,
+      head: [
+        [
+          "Aluno",
+          "Nota Final",
+          "Status",
+          "Lançado Por",
+          "Data do Lançamento",
         ],
-        body: n,
-        theme: "grid",
-        headStyles: { fillColor: [88, 28, 135] },
-      }),
-      t.save(`Relatorio_${a.replace(/\s+/g, "_")}_${r}.pdf`));
+      ],
+      body: n,
+      theme: "grid",
+      headStyles: { fillColor: [88, 28, 135] },
+    });
+    t.save(`Relatorio_${disciplina.replace(/\s+/g, "_")}_${turmaNome.replace(/\s+/g, "_")}_${r}.pdf`);
   } catch (o) {
-    (console.error("Erro ao gerar PDF:", o),
-      f("Falha ao gerar o relatório.", "error"));
+    console.error("Erro ao gerar PDF:", o);
+    f("Falha ao gerar o relatório.", "error");
   }
 }
 async function Je(a, e) {
