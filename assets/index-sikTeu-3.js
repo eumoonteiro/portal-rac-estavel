@@ -3345,6 +3345,31 @@ async function notificarDocumentoEnviado(alunoUid, tipoDocumento) {
   }
 }
 
+// Celebrative email notification for certificate ready
+async function notificarCertificadoPronto(alunoUid) {
+  try {
+    const alunoDoc = await _(L(u, 'utilizadores', alunoUid));
+    if (!alunoDoc.exists()) return;
+    const alunoData = alunoDoc.data();
+    const email = alunoData.emailContato;
+    if (!email) return;
+
+    const cursoNome = F.get(y)?.nome || 'Pós-graduação RAC';
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_GERAL, {
+      to_email: email,
+      to_name: alunoData.nome || 'Aluno(a)',
+      subject: '🎓 Parabéns! Seu Certificado de Conclusão está pronto! 🎉',
+      title: '🎓 Certificado Disponível!',
+      message: `Parabéns pela sua conquista! O seu Certificado de Conclusão da pós-graduação em "${cursoNome}" está oficialmente pronto e disponível!`,
+      detail: `Essa é a coroação de toda a sua dedicação, esforço e jornada acadêmica conosco. Estamos muito orgulhosos de fazer parte dessa sua conquista e de comemorar este marco na sua carreira!\n\nSeu certificado digital já está disponível para visualização e download em seu Portal do Aluno.\n\nParabéns e muito sucesso em sua trajetória profissional! 🏆✨`,
+      portal_url: 'https://portal.racposgraduacao.com.br/',
+    });
+    console.log('[Email] Certificado pronto → aluno:', email);
+  } catch (err) {
+    console.warn('[Email] Erro notificação certificado:', err);
+  }
+}
+
 // ============ EMAIL DE CONTATO DO ALUNO ============
 
 window.salvarEmailAluno = async function (email) {
@@ -3522,6 +3547,50 @@ window.uploadCarteirinha = async function (input) {
   }
 };
 
+// --- CERTIFICADO (por aluno) ---
+// Path: certificados/{cursoId}/{alunoUid}.pdf
+
+window.uploadCertificado = async function (input) {
+  const file = input.files[0];
+  if (!file) return;
+  const alunoId = document.getElementById('certificado-aluno-select').value;
+  if (!alunoId) {
+    f('Selecione um aluno primeiro.', 'error');
+    return;
+  }
+  const statusEl = document.getElementById('certificado-upload-status');
+  statusEl.textContent = 'Enviando...';
+  statusEl.className = 'text-[10px] text-blue-500 font-bold';
+
+  try {
+    const path = `certificados/${y}/${alunoId}.pdf`;
+    const storageRef = sr(st, path);
+    await ub(storageRef, file);
+    statusEl.textContent = '✅ Enviado!';
+    statusEl.className = 'text-[10px] text-emerald-600 font-bold';
+    const alunoNome = document.getElementById('certificado-aluno-select').selectedOptions[0]?.textContent || 'Aluno';
+    f(`Certificado de ${alunoNome} enviado!`, 'success');
+    // Notificar aluno por email celebrativo
+    notificarCertificadoPronto(alunoId).catch(e => console.warn(e));
+  } catch (err) {
+    console.error('Erro upload certificado:', err);
+    statusEl.textContent = '❌ Erro';
+    statusEl.className = 'text-[10px] text-red-500 font-bold';
+    f('Erro ao enviar: ' + err.message, 'error');
+  }
+};
+
+// Check if student certificate exists
+async function getCertificadoURL(alunoUid, cursoId) {
+  try {
+    const path = `certificados/${cursoId}/${alunoUid}.pdf`;
+    const storageRef = sr(st, path);
+    return await gdu(storageRef);
+  } catch (err) {
+    return null;
+  }
+}
+
 // Check if student ID card exists
 async function getCarteirinhaURL(alunoUid, cursoId) {
   try {
@@ -3535,7 +3604,7 @@ async function getCarteirinhaURL(alunoUid, cursoId) {
 
 // Populate document selects with students
 async function popularDocumentosSelects() {
-  const selects = ['carteirinha-aluno-select', 'declaracao-aluno-select'];
+  const selects = ['carteirinha-aluno-select', 'declaracao-aluno-select', 'certificado-aluno-select'];
 
   try {
     const snap = await D($(C(u, 'utilizadores'), v('role', '==', 'aluno'), v('cursos', 'array-contains', y)));
@@ -3557,14 +3626,20 @@ async function popularDocumentosSelects() {
 }
 
 window.visualizarDocumento = async function (tipo) {
-    const selectId = tipo === 'declaracao' ? 'declaracao-aluno-select' : 'carteirinha-aluno-select';
+    let selectId = 'declaracao-aluno-select';
+    if (tipo === 'carteirinha') selectId = 'carteirinha-aluno-select';
+    else if (tipo === 'certificado') selectId = 'certificado-aluno-select';
+
     const alunoId = document.getElementById(selectId).value;
     if (!alunoId) {
         f('Selecione um aluno primeiro.', 'error');
         return;
     }
     try {
-        const path = tipo === 'declaracao' ? `declaracoes/${y}/${alunoId}.pdf` : `carteirinhas/${y}/${alunoId}.pdf`;
+        let path = `declaracoes/${y}/${alunoId}.pdf`;
+        if (tipo === 'carteirinha') path = `carteirinhas/${y}/${alunoId}.pdf`;
+        else if (tipo === 'certificado') path = `certificados/${y}/${alunoId}.pdf`;
+
         const storageRef = sr(st, path);
         const url = await gdu(storageRef);
         window.open(url, '_blank');
@@ -3605,6 +3680,18 @@ async function verificarDocumentosAluno(alunoUid, cursoId) {
       cartStatus.textContent = 'Em breve';
       cartStatus.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-400';
       cartBtn.onclick = () => f('Sua carteirinha ainda não está disponível. Aguarde a emissão pela coordenação.', 'warning');
+    }
+  }
+
+  // Check certificado (only appears if available)
+  const certBtn = document.getElementById('certificado-btn');
+  if (certBtn) {
+    const certUrl = await getCertificadoURL(alunoUid, cursoId);
+    if (certUrl) {
+      certBtn.classList.remove('hidden');
+      certBtn.onclick = () => window.open(certUrl, '_blank');
+    } else {
+      certBtn.classList.add('hidden');
     }
   }
 }
